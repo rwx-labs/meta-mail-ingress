@@ -1,0 +1,12 @@
+[aws]
+# profile_name = "cloudflare-r2"
+endpoint_url = "https://262cf8aeb384b1f034577956e3baa60a.r2.cloudflarestorage.com"
+
+[aws.s3]
+bucket_name = "rwx-pub"
+
+[ingestion]
+api_token = "hello-world"
+
+[tracing]
+enabled = true

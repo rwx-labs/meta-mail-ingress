@@ -1,0 +1,11 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "meta-mail-ingress"
+main = "src/index.ts"
+compatibility_date = "2024-05-02"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+[vars]
+# SERVICE_URL = "http://masked-mails-ingestion.infra.rwx.im"
+# SERVICE_URL = "http://mail-ingest.rwx.im:8080"
+SERVICE_URL = "https://meta-mail-ingress.infra.rwx.im"

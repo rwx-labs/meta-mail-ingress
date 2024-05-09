@@ -1,0 +1,3 @@
+target/
+cloudflare-worker/
+Dockerfile
