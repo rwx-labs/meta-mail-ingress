@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use tempfile::TempPath;
-use tracing::debug;
+use tracing::{debug, error};
 
 use crate::Error;
 
@@ -23,7 +23,6 @@ impl Debug for dyn PostProcessor {
     }
 }
 
-struct RemoveExif;
 struct RotateImageExif;
 
 impl PostProcessor for RotateImageExif {
@@ -35,8 +34,8 @@ impl PostProcessor for RotateImageExif {
     }
 
     fn check(&self) -> bool {
-        match Command::new("exiftran").arg("-h").status() {
-            Ok(status) => status.success(),
+        match Command::new("exiftran").arg("-h").output() {
+            Ok(output) => output.status.success(),
             Err(_) => false,
         }
     }
@@ -55,6 +54,7 @@ impl PostProcessor for RotateImageExif {
     }
 }
 
+struct RemoveExif;
 impl PostProcessor for RemoveExif {
     fn applicable(&self, mime_type: &str) -> bool {
         matches!(
@@ -64,8 +64,8 @@ impl PostProcessor for RemoveExif {
     }
 
     fn check(&self) -> bool {
-        match Command::new("exiv2").arg("--version").status() {
-            Ok(status) => status.success(),
+        match Command::new("exiv2").arg("--version").output() {
+            Ok(output) => output.status.success(),
             Err(_) => false,
         }
     }
@@ -83,5 +83,15 @@ impl PostProcessor for RemoveExif {
 pub fn init() -> Vec<Box<dyn PostProcessor>> {
     debug!("initializing postprocessors");
 
-    vec![Box::new(RotateImageExif), Box::new(RemoveExif)]
+    let processors: Vec<Box<dyn PostProcessor>> =
+        vec![Box::new(RotateImageExif), Box::new(RemoveExif)];
+
+    if processors.iter().any(|x| !x.check()) {
+        let msg = "postprocessor failed sanity check";
+
+        error!(msg);
+        panic!("{}", msg);
+    }
+
+    processors
 }

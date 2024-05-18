@@ -49,7 +49,7 @@ async fn main() -> miette::Result<()> {
     let opts: cli::Opts = argh::from_env();
     let config: Config = Figment::new()
         .merge(Toml::file(opts.config_path))
-        .merge(Env::prefixed("MM_").lowercase(false).split("__"))
+        .merge(Env::raw().lowercase(false).split("__"))
         .extract()
         .into_diagnostic()?;
 
@@ -57,7 +57,6 @@ async fn main() -> miette::Result<()> {
 
     let sdk_config = load_aws_config(&config.aws).await;
     let s3_client = aws_s3::Client::new(&sdk_config);
-
     let mail_handler = Arc::new(Mutex::new(MailHandler::new(
         s3_client,
         config.aws.s3_config.clone(),
