@@ -5,6 +5,7 @@ use axum::{
     extract::{DefaultBodyLimit, FromRequestParts},
     http::{header::AUTHORIZATION, request::Parts, StatusCode},
     response::IntoResponse,
+    routing::get,
     Router,
 };
 use listenfd::ListenFd;
@@ -75,6 +76,11 @@ async fn shutdown_signal() {
     println!("signal received, starting graceful shutdown");
 }
 
+/// Returns the health status of the server.
+pub async fn healthcheck() -> (StatusCode, &'static str) {
+    (StatusCode::OK, "ok")
+}
+
 #[instrument(skip_all)]
 pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
     debug!("starting http server");
@@ -82,6 +88,8 @@ pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
     let api_v1_router = api::v1::router();
     let app = Router::new()
         .nest("/api/v1", api_v1_router)
+        .route("/livez", get(healthcheck))
+        .route("/readyz", get(healthcheck))
         .with_state(state)
         .fallback(not_found)
         .layer(TraceLayer::new_for_http())

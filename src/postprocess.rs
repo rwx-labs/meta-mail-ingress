@@ -55,6 +55,7 @@ impl PostProcessor for RotateImageExif {
 }
 
 struct RemoveExif;
+
 impl PostProcessor for RemoveExif {
     fn applicable(&self, mime_type: &str) -> bool {
         matches!(
