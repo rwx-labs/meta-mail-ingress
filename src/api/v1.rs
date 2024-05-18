@@ -36,17 +36,16 @@ pub fn router() -> Router<AppState> {
 }
 
 mod handlers {
-    use crate::AppState;
-
-    use super::*;
-
     use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
     use base64::prelude::{Engine, BASE64_STANDARD};
     use mail_parser::MessageParser;
     use tracing::{debug, error};
 
+    use super::*;
+
+    use crate::AppState;
+
     #[tracing::instrument(skip_all)]
-    #[axum::debug_handler]
     pub(super) async fn ingest(
         AuthToken(token): AuthToken,
         State(AppState {

@@ -7,8 +7,9 @@ use axum::{
     response::IntoResponse,
     Router,
 };
+use listenfd::ListenFd;
 use miette::IntoDiagnostic;
-use tokio::signal;
+use tokio::{net::TcpListener, signal};
 use tower_http::{
     compression::{CompressionLayer, CompressionLevel},
     trace::TraceLayer,
@@ -79,7 +80,6 @@ pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
     debug!("starting http server");
 
     let api_v1_router = api::v1::router();
-
     let app = Router::new()
         .nest("/api/v1", api_v1_router)
         .with_state(state)
@@ -89,11 +89,20 @@ pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
         .layer(DefaultBodyLimit::max(30 * 1024 * 1024));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let mut listenfd = ListenFd::from_env();
+    let listener = match listenfd.take_tcp_listener(0).unwrap() {
+        // if we are given a tcp listener on listen fd 0, we use that one
+        Some(listener) => {
+            listener.set_nonblocking(true).unwrap();
+            TcpListener::from_std(listener).unwrap()
+        }
+        // otherwise fall back to local listening
+        None => {
+            debug!("binding to {}", addr);
 
-    debug!("binding to {}", addr);
-    let listener = tokio::net::TcpListener::bind(addr)
-        .await
-        .into_diagnostic()?;
+            TcpListener::bind(addr).await.into_diagnostic()?
+        }
+    };
 
     debug!("listening on {}", addr);
     axum::serve(listener, app.into_make_service())

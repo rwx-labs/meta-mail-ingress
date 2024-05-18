@@ -10,6 +10,8 @@ pub enum Error {
     CreateTempFile(#[source] io::Error),
     #[error("post-processing failed: {0}")]
     PostProcessFailed(String),
+    #[error("aws sdk error")]
+    AwsS3Error(#[source] Box<aws_sdk_s3::Error>),
     #[error("s3 error")]
     S3PutObjectFailed(#[source] Box<aws_sdk_s3::Error>),
     #[error("reqwest error")]

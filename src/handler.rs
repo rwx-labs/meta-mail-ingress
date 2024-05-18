@@ -3,14 +3,15 @@ use std::{
     io::{self, Write},
 };
 
-use aws_sdk_s3::{primitives::ByteStream, types::ObjectCannedAcl};
+use aws_sdk_s3::{primitives::ByteStream, types::ObjectCannedAcl, Error as AwsS3Error};
 use mail_parser::Message;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use tempfile::TempPath;
+use tempfile::{NamedTempFile, TempPath};
 use tracing::{debug, info, instrument};
 
 use crate::{
+    config::AwsS3Config,
     postprocess::{self, PostProcessor},
     Error,
 };
@@ -27,18 +28,25 @@ pub struct MailHandler {
     pub processors: Vec<Box<dyn PostProcessor>>,
     /// AWS S3 client.
     pub s3_client: aws_sdk_s3::Client,
+    /// AWS S3 configuration.
+    pub s3_config: AwsS3Config,
     /// Meta webhook bearer token.
     pub meta_webhook_token: String,
 }
 
 impl MailHandler {
-    pub fn new(s3_client: aws_sdk_s3::Client, meta_webhook_token: String) -> Self {
+    pub fn new(
+        s3_client: aws_sdk_s3::Client,
+        s3_config: AwsS3Config,
+        meta_webhook_token: String,
+    ) -> Self {
         MailHandler {
             num_attachments_bytes_processed: 0,
             num_attachments_processed: 0,
             num_mails_processed: 0,
             processors: postprocess::init(),
             s3_client,
+            s3_config,
             meta_webhook_token,
         }
     }
@@ -58,7 +66,7 @@ impl MailHandler {
 
             let attachment_size = attachment.len();
             let mime_type = tree_magic_mini::from_u8(attachment.contents());
-            let mut file = tempfile::NamedTempFile::new().expect("could not create temp file"); // .map_err(Error::CreateTempFile)?;
+            let mut file = NamedTempFile::new().expect("could not create temp file"); // .map_err(Error::CreateTempFile)?;
 
             debug!(
                 path = %file.path().display(),
@@ -122,6 +130,23 @@ impl MailHandler {
         Ok(())
     }
 
+    /// Returns whether the object with the given `key` already exists in the S3 bucket.
+    pub async fn object_exists(&mut self, key: &str) -> Result<bool, Error> {
+        match self
+            .s3_client
+            .head_object()
+            .bucket(&self.s3_config.bucket_name)
+            .key(key)
+            .send()
+            .await
+            .map_err(|e| e.into())
+        {
+            Ok(_) => Ok(true),
+            Err(AwsS3Error::NotFound(_)) => Ok(false),
+            Err(e) => Err(Error::AwsS3Error(Box::new(e))),
+        }
+    }
+
     #[instrument(skip_all)]
     pub async fn upload_attachment(
         &mut self,
@@ -132,18 +157,25 @@ impl MailHandler {
         let hash_bytes = {
             let mut hasher = Sha256::new();
             let mut file = fs::File::open(&path)?;
-            let _bytes_written = io::copy(&mut file, &mut hasher)?;
+            let _ = io::copy(&mut file, &mut hasher)?;
 
             hasher.finalize()
         };
+        let key = format!("~meta/mails/v1/{:x}", hash_bytes);
+
+        // Check if the file already exists.
+        if let Ok(true) = self.object_exists(&key).await {
+            debug!("skipping upload of object as it already exists in the bucket");
+
+            return Ok(key);
+        }
 
         debug!("uploading object with key {:x}", hash_bytes);
 
-        let key = format!("~meta/mails/v1/{:x}", hash_bytes);
         let put_object = self
             .s3_client
             .put_object()
-            .bucket("rwx-pub")
+            .bucket(&self.s3_config.bucket_name)
             .acl(ObjectCannedAcl::PublicRead)
             .key(&key)
             .content_type(mime_type)

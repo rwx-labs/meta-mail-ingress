@@ -11,6 +11,7 @@ axum = { version = "0.7.5", features = ["macros"] }
 base64 = "0.22.1"
 clap = { version = "4.5.4", features = ["derive", "env"] }
 figment = { version = "0.10.19", features = ["toml", "env"] }
+listenfd = "1.0.1"
 mail-parser = "0.9.3"
 miette = { version = "7.2.0", features = ["fancy"] }
 opentelemetry = "0.22.0"

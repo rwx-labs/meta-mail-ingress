@@ -60,6 +60,7 @@ async fn main() -> miette::Result<()> {
 
     let mail_handler = Arc::new(Mutex::new(MailHandler::new(
         s3_client,
+        config.aws.s3_config.clone(),
         config.meta_webhook.token,
     )));
     let app_state = AppState {
