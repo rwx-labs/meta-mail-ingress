@@ -66,7 +66,7 @@ impl MailHandler {
 
             let attachment_size = attachment.len();
             let mime_type = tree_magic_mini::from_u8(attachment.contents());
-            let mut file = NamedTempFile::new().expect("could not create temp file"); // .map_err(Error::CreateTempFile)?;
+            let mut file = NamedTempFile::new().expect("could not create temp file");
 
             debug!(
                 path = %file.path().display(),
@@ -165,12 +165,12 @@ impl MailHandler {
 
         // Check if the file already exists.
         if let Ok(true) = self.object_exists(&key).await {
-            debug!("skipping upload of object as it already exists in the bucket");
+            debug!(%key, "skipping upload of object as it already exists in the bucket");
 
             return Ok(key);
         }
 
-        debug!("uploading object with key {:x}", hash_bytes);
+        debug!(%key, "uploading object");
 
         let put_object = self
             .s3_client
@@ -184,7 +184,7 @@ impl MailHandler {
         let body = ByteStream::from_path(&path).await;
 
         if let Ok(b) = body {
-            let _result = put_object
+            let _ = put_object
                 .body(b)
                 .send()
                 .await

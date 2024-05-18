@@ -16,7 +16,7 @@ jobs:
         IRC_CHANNEL: ${{ vars.IRC_CHANNEL }}
         WEBHOOK_META_TOKEN: ${{ secrets.WEBHOOK_META_TOKEN }}
       run: |
-        message="\\u000310> Building ${{ github.repository }} (ref: \\u000f${{ github.sha }}\\u000310)"
+        message="\\u000310> Building ${{ github.repository }} (ref: \\u000f${{ github.sha }}\\u000310) @ https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
         curl -X POST -H "Authorization: Bearer ${WEBHOOK_META_TOKEN}" \
           --max-time 10 \
@@ -37,7 +37,7 @@ jobs:
       uses: docker/metadata-action@v5
       id: meta
       with:
-        images: ghcr.io/rwx-labs/meta-oss
+        images: ghcr.io/${{ github.repository }}
         tags: |
           type=sha,format=long
           type=edge
@@ -61,26 +61,26 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        # - name: Notify about pending deployment
-        #   env:
-        #     IRC_NETWORK: ${{ vars.IRC_NETWORK }}
-        #     IRC_CHANNEL: ${{ vars.IRC_CHANNEL }}
-        #     META_WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_META_TOKEN }}
-        #     MESSAGE: |-
-        #       mk: meta-oss is pending deployment to production @ https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        #   run: |
-        #     curl -X POST -H "Authorization: Bearer ${META_WEBHOOK_TOKEN}" \
-        #       -H "Content-Type: application/json" \
-        #       -d @- https://meta-webhook.infra.rwx.im/trigger <<JSON
-        #     {
-        #       "method": "message",
-        #       "params": {
-        #         "network": "${IRC_NETWORK}",
-        #         "channel": "${IRC_CHANNEL}",
-        #         "message": "${MESSAGE}"
-        #       }
-        #     }
-        #     JSON
+        #- name: Notify about pending deployment
+        #  env:
+        #    IRC_NETWORK: ${{ vars.IRC_NETWORK }}
+        #    IRC_CHANNEL: ${{ vars.IRC_CHANNEL }}
+        #    META_WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_META_TOKEN }}
+        #    MESSAGE: |-
+        #      mk: meta-mail-ingress is pending deployment to production @ https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        #  run: |
+        #    curl -X POST -H "Authorization: Bearer ${META_WEBHOOK_TOKEN}" \
+        #      -H "Content-Type: application/json" \
+        #      -d @- https://meta-webhook.infra.rwx.im/trigger <<JSON
+        #    {
+        #      "method": "message",
+        #      "params": {
+        #        "network": "${IRC_NETWORK}",
+        #        "channel": "${IRC_CHANNEL}",
+        #        "message": "${MESSAGE}"
+        #      }
+        #    }
+        #    JSON
 
         # deploy:
         #   name: Deploy / Production
