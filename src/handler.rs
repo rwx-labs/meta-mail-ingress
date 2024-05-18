@@ -179,7 +179,7 @@ impl MailHandler {
             .acl(ObjectCannedAcl::PublicRead)
             .key(&key)
             .content_type(mime_type)
-            .content_disposition("inline");
+            .content_disposition(content_type_disposition(mime_type));
 
         let body = ByteStream::from_path(&path).await;
 
@@ -204,5 +204,14 @@ impl MailHandler {
         }
 
         Ok("".to_string())
+    }
+}
+
+/// Returns the content disposition based on the given `content_type`.
+fn content_type_disposition(content_type: &str) -> &'static str {
+    match content_type {
+        "image/jpeg" | "image/png" | "image/heic" | "image/webp" | "image/gif" => "inline",
+        "video/mp4" | "video/mpeg" | "video/ogg" | "video/webm" => "inline",
+        _ => "attachment",
     }
 }
