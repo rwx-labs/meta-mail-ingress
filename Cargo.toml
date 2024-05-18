@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 argh = "0.1.12"
-aws-config = "1.4.0"
+aws-config = { version = "1.4.0", default-features = false, features = ["client-hyper", "rustls", "rt-tokio"] }
 aws-sdk-s3 = "1.29.0"
 axum = { version = "0.7.5", features = ["macros"] }
 base64 = "0.22.1"
@@ -32,8 +32,8 @@ tree_magic_mini = { version = "3.1.4", features = ["with-gpl-data"] }
 url = { version = "2.5.0", features = ["serde"] }
 
 [profile.release]
-# lto = "fat"
-# strip = "debuginfo"
-# panic = "abort"
-# opt-level = "z"
-# codegen-units = 1
+lto = "fat"
+strip = "debuginfo"
+panic = "abort"
+opt-level = "z"
+codegen-units = 1

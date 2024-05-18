@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use aws_config::BehaviorVersion;
 use aws_sdk_s3 as aws_s3;
 use figment::{
     providers::{Env, Format, Toml},
@@ -28,7 +29,7 @@ pub struct AppState {
 }
 
 async fn load_aws_config(app_aws_config: &config::AwsConfig) -> aws_config::SdkConfig {
-    let mut config_loader = aws_config::from_env();
+    let mut config_loader = aws_config::defaults(BehaviorVersion::latest());
 
     // Override the profile name to load.
     if let Some(ref profile_name) = app_aws_config.profile_name {

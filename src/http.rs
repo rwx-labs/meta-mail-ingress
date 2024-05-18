@@ -17,6 +17,32 @@ use tracing::{debug, instrument};
 
 use crate::api;
 
+pub struct AuthToken(pub String);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for AuthToken
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, &'static str);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        if let Some(auth) = parts.headers.get(AUTHORIZATION) {
+            let value = auth.as_bytes();
+
+            if value.starts_with(b"Token ") {
+                let token = String::from_utf8_lossy(&value[6..]);
+
+                Ok(AuthToken(token.into_owned()))
+            } else {
+                Err((StatusCode::BAD_REQUEST, "invalid authorization scheme"))
+            }
+        } else {
+            Err((StatusCode::BAD_REQUEST, "authorization token is missing"))
+        }
+    }
+}
+
 #[instrument]
 async fn not_found() -> impl IntoResponse {
     (StatusCode::NOT_FOUND, "404 page not found")
@@ -46,32 +72,6 @@ async fn shutdown_signal() {
     }
 
     println!("signal received, starting graceful shutdown");
-}
-
-pub struct AuthToken(pub String);
-
-#[async_trait]
-impl<S> FromRequestParts<S> for AuthToken
-where
-    S: Send + Sync,
-{
-    type Rejection = (StatusCode, &'static str);
-
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        if let Some(auth) = parts.headers.get(AUTHORIZATION) {
-            let value = auth.as_bytes();
-
-            if value.starts_with(b"Token ") {
-                let token = String::from_utf8_lossy(&value[6..]);
-
-                Ok(AuthToken(token.into_owned()))
-            } else {
-                Err((StatusCode::BAD_REQUEST, "invalid authorization scheme"))
-            }
-        } else {
-            Err((StatusCode::BAD_REQUEST, "authorization token is missing"))
-        }
-    }
 }
 
 #[instrument(skip_all)]
