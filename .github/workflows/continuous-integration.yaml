@@ -1,0 +1,45 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches:
+    - main
+
+permissions:
+  actions: read
+  contents: read
+  checks: write
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable, nightly]
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Install Rust ${{ matrix.rust }}
+      uses: dtolnay/rust-toolchain@d8352f6b1d2e870bc5716e7a6d9b65c4cc244a1a # master
+      with:
+        toolchain: ${{ matrix.rust }}
+        components: clippy
+    - name: Cache Cargo
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-${{ matrix.rust }}-
+    - name: Run Clippy check
+      uses: clechasseur/rs-clippy-check@6489db34e7d7a162364f8ee3d7ad2cd1060dc1d7 # v3.0.3
+      with:
+        args: --all-features
