@@ -59,7 +59,7 @@ mod handlers {
         }
 
         let mail_parser = MessageParser::new()
-            .with_mime_headers()
+            .with_minimal_headers()
             .with_date_headers()
             .with_address_headers()
             .with_message_ids();
