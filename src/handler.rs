@@ -10,11 +10,7 @@ use sha2::{Digest, Sha256};
 use tempfile::{NamedTempFile, TempPath};
 use tracing::{debug, info, instrument};
 
-use crate::{
-    config::AwsS3Config,
-    postprocess::{self, PostProcessor},
-    Error,
-};
+use crate::{config::AwsS3Config, postprocess::PostProcessor, Error};
 
 #[derive(Debug)]
 pub struct MailHandler {
@@ -39,12 +35,13 @@ impl MailHandler {
         s3_client: aws_sdk_s3::Client,
         s3_config: AwsS3Config,
         meta_webhook_token: String,
+        postprocessors: Vec<Box<dyn PostProcessor>>,
     ) -> Self {
         MailHandler {
             num_attachments_bytes_processed: 0,
             num_attachments_processed: 0,
             num_mails_processed: 0,
-            processors: postprocess::init(),
+            processors: postprocessors,
             s3_client,
             s3_config,
             meta_webhook_token,

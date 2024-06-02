@@ -1,8 +1,9 @@
 use std::io;
 
+use miette::Diagnostic;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Diagnostic)]
 pub enum Error {
     #[error("io error")]
     IoError(#[from] io::Error),
@@ -16,4 +17,6 @@ pub enum Error {
     S3PutObjectFailed(#[source] Box<aws_sdk_s3::Error>),
     #[error("reqwest error")]
     Reqwest(#[from] reqwest::Error),
+    #[error("the tool `{0}' failed healthcheck, is it installed?")]
+    ToolCheckFailed(String),
 }
