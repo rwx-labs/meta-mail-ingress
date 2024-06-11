@@ -1,13 +1,13 @@
 use std::process::Command;
 
 use tempfile::TempPath;
-use tracing::{debug, error};
+use tracing::debug;
 
 use crate::Error;
 
 pub trait PostProcessor: Send {
     /// Checks whether the post-processor is functional.
-    fn check(&self) -> bool;
+    fn check(&self) -> Result<bool, Error>;
 
     /// Returns true if the postprocessor should run for the provided `mime_type`.
     fn applicable(&self, mime_type: &'static str) -> bool;
@@ -33,10 +33,10 @@ impl PostProcessor for RotateImageExif {
         )
     }
 
-    fn check(&self) -> bool {
+    fn check(&self) -> Result<bool, Error> {
         match Command::new("exiftran").arg("-h").output() {
-            Ok(output) => output.status.success(),
-            Err(_) => false,
+            Ok(output) => Ok(output.status.success()),
+            Err(_) => Err(Error::ToolCheckFailed("exiftran".to_string())),
         }
     }
 
@@ -60,39 +60,46 @@ impl PostProcessor for RemoveExif {
     fn applicable(&self, mime_type: &str) -> bool {
         matches!(
             mime_type,
-            "image/jpeg" | "image/png" | "image/heic" | "image/webp"
+            "image/jpeg"
+                | "image/png"
+                | "image/heic"
+                | "image/webp"
+                | "video/mp4"
+                | "video/heic"
+                | "video/mpeg"
+                | "video/quicktime"
+                | "video/3gpp"
+                | "video/x-msvideo"
+                | "video/x-ms-wmv"
         )
     }
 
-    fn check(&self) -> bool {
-        match Command::new("exiv2").arg("--version").output() {
-            Ok(output) => output.status.success(),
-            Err(_) => false,
+    fn check(&self) -> Result<bool, Error> {
+        match Command::new("exiftool").arg("-ver").output() {
+            Ok(output) => Ok(output.status.success()),
+            Err(_) => Err(Error::ToolCheckFailed("exiftool".to_string())),
         }
     }
 
     fn apply(&self, path: TempPath) -> Result<TempPath, Error> {
-        debug!("running exiv2 on {path}", path = &path.display());
+        debug!("running exiftool on {path}", path = &path.display());
 
-        match Command::new("exiv2").args(["rm"]).arg(&path).status() {
+        match Command::new("exiftool").args(["-all="]).arg(&path).status() {
             Ok(status) if status.success() => Ok(path),
-            _ => Err(Error::PostProcessFailed("exiv2 failed".to_string())),
+            _ => Err(Error::PostProcessFailed("exiftool failed".to_string())),
         }
     }
 }
 
-pub fn init() -> Vec<Box<dyn PostProcessor>> {
+pub fn init() -> Result<Vec<Box<dyn PostProcessor>>, Error> {
     debug!("initializing postprocessors");
 
     let processors: Vec<Box<dyn PostProcessor>> =
         vec![Box::new(RotateImageExif), Box::new(RemoveExif)];
 
-    if processors.iter().any(|x| !x.check()) {
-        let msg = "postprocessor failed sanity check";
-
-        error!(msg);
-        panic!("{}", msg);
+    for processor in &processors {
+        let _ = processor.check()?;
     }
 
-    processors
+    Ok(processors)
 }

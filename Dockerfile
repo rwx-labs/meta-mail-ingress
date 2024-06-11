@@ -9,7 +9,7 @@ RUN cargo build --release
 
 FROM debian:bookworm
 
-RUN apt update && apt install -y exiv2 exiftran libssl3 ca-certificates
+RUN apt update && apt install -y exiftran libssl3 exiftool ca-certificates
 
 USER nobody
 
