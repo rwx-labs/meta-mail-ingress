@@ -67,7 +67,10 @@ impl PostProcessor for RemoveExif {
                 | "video/mp4"
                 | "video/heic"
                 | "video/mpeg"
-                | "video/x-quicktime"
+                | "video/quicktime"
+                | "video/3gpp"
+                | "video/x-msvideo"
+                | "video/x-ms-wmv"
         )
     }
 
