@@ -73,7 +73,8 @@ mod handlers {
             match mail_parser.parse(&decoded[..]) {
                 Some(parsed) => {
                     debug!("parsed mail");
-                    let _ = mail_handler.lock().await.handle(parsed).await;
+                    let from = mail.metadata.from.as_deref();
+                    let _ = mail_handler.lock().await.handle(parsed, from).await;
                 }
                 None => {
                     error!("could not parse email");

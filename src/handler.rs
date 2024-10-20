@@ -49,7 +49,7 @@ impl MailHandler {
     }
 
     #[instrument(skip_all)]
-    pub async fn handle(&mut self, mail: Message<'_>) -> Result<(), Error> {
+    pub async fn handle(&mut self, mail: Message<'_>, from: Option<&str>) -> Result<(), Error> {
         if mail.attachment_count() == 0 {
             info!(from = ?mail.from(), "skipping email as it doesn't contain any attachments");
 
@@ -86,10 +86,7 @@ impl MailHandler {
             }
 
             if let Some(inner_path) = path {
-                let sender = mail
-                    .sender()
-                    .and_then(|x| x.first())
-                    .and_then(|x| x.address());
+                let sender = from;
 
                 let _ = self
                     .upload_attachment(inner_path, mime_type, subject, sender)
