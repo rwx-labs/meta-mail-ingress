@@ -4,6 +4,7 @@ use std::{
 };
 
 use aws_sdk_s3::{primitives::ByteStream, types::ObjectCannedAcl, Error as AwsS3Error};
+use base64::prelude::{Engine, BASE64_URL_SAFE_NO_PAD};
 use mail_parser::Message;
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -163,7 +164,9 @@ impl MailHandler {
 
             hasher.finalize()
         };
-        let key = format!("~meta/mails/v1/{:x}", hash_bytes);
+
+        let encoded_hash = BASE64_URL_SAFE_NO_PAD.encode(hash_bytes);
+        let key = format!("~meta/mails/v2/{}", encoded_hash);
 
         // Check if the file already exists.
         if let Ok(true) = self.object_exists(&key).await {
