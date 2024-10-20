@@ -86,7 +86,14 @@ impl MailHandler {
             }
 
             if let Some(inner_path) = path {
-                let _ = self.upload_attachment(inner_path, mime_type, subject).await;
+                let sender = mail
+                    .sender()
+                    .and_then(|x| x.first())
+                    .and_then(|x| x.address());
+
+                let _ = self
+                    .upload_attachment(inner_path, mime_type, subject, sender)
+                    .await;
             }
 
             self.num_attachments_processed += 1;
@@ -150,6 +157,7 @@ impl MailHandler {
         path: TempPath,
         mime_type: &str,
         subject: Option<&str>,
+        sender: Option<&str>,
     ) -> Result<String, Error> {
         let hash_bytes = {
             let mut hasher = Sha256::new();
@@ -187,15 +195,19 @@ impl MailHandler {
                 .await
                 .map_err(|e| Error::S3PutObjectFailed(Box::new(e.into())))?;
 
+            let sender = sender.unwrap_or("unknown");
+
             if let Some(subject) = subject {
                 let _ = self
                     .send_chat_message(format!(
-                        "\x0310> Mail received (\x0f{subject}\x0310) https://pub.rwx.im/{key}"
+                        "\x0310> “\x0f{subject}\x0310” from\x0f {sender}\x0310: https://pub.rwx.im/{key}"
                     ))
                     .await;
             } else {
                 let _ = self
-                    .send_chat_message(format!("\x0310> Mail received https://pub.rwx.im/{key}"))
+                    .send_chat_message(format!(
+                        "\x0310> Mail received from\x0f {sender}\x0310 https://pub.rwx.im/{key}"
+                    ))
                     .await;
             }
         }
