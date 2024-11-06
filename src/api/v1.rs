@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use axum::{routing::post, Router};
 use serde::Deserialize;
+use tracing::info;
 
 use crate::{http::AuthToken, AppState};
 
@@ -58,6 +59,8 @@ mod handlers {
             return (StatusCode::UNAUTHORIZED, "invalid api token").into_response();
         }
 
+        info!(?payload, "ingesting");
+
         let mail_parser = MessageParser::new()
             .with_minimal_headers()
             .with_date_headers()
@@ -72,8 +75,8 @@ mod handlers {
 
             match mail_parser.parse(&decoded[..]) {
                 Some(parsed) => {
-                    debug!("parsed mail");
                     let from = mail.metadata.from.as_deref();
+                    debug!(?from, ?parsed, "parsed mail");
                     let _ = mail_handler.lock().await.handle(parsed, from).await;
                 }
                 None => {
