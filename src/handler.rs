@@ -172,6 +172,21 @@ impl MailHandler {
         if let Ok(true) = self.object_exists(&key).await {
             debug!(%key, "skipping upload of object as it already exists in the bucket");
 
+            let sender = sender.unwrap_or("unknown");
+
+            if let Some(sub) = subject {
+                let _ = self
+                    .send_chat_message(format!(
+                        "\x0310> “\x0f{sub}\x0310” from\x0f {sender}\x0310: https://pub.rwx.im/{key}"
+                    ))
+                    .await;
+            } else {
+                let _ = self
+                    .send_chat_message(format!(
+                        "\x0310> Mail received from\x0f {sender}\x0310 https://pub.rwx.im/{key}"
+                    ))
+                    .await;
+            }
             return Ok(key);
         }
 
