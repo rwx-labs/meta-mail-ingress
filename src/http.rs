@@ -1,7 +1,6 @@
 use std::net::SocketAddr;
 
 use axum::{
-    async_trait,
     extract::{DefaultBodyLimit, FromRequestParts},
     http::{header::AUTHORIZATION, request::Parts, StatusCode},
     response::IntoResponse,
@@ -21,14 +20,13 @@ use crate::api;
 
 pub struct AuthToken(pub String);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for AuthToken
 where
     S: Send + Sync,
 {
     type Rejection = (StatusCode, &'static str);
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
         if let Some(auth) = parts.headers.get(AUTHORIZATION) {
             let value = auth.as_bytes();
 
