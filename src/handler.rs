@@ -9,9 +9,21 @@ use mail_parser::Message;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use tempfile::{NamedTempFile, TempPath};
-use tracing::{debug, info, instrument};
+use tracing::{debug, error, info, instrument};
 
 use crate::{config::AwsS3Config, postprocess::PostProcessor, Error};
+
+/// The result of an attachment upload.
+pub struct AttachmentUpload {
+    /// The key of the stored object.
+    pub key: String,
+    /// The subject of the e-mail, if any.
+    pub subject: Option<String>,
+    /// The sender of the e-mail.
+    pub sender: Option<String>,
+    /// Whether the attachment already existed in the remote bucket.
+    pub cached: bool,
+}
 
 #[derive(Debug)]
 pub struct MailHandler {
@@ -32,6 +44,7 @@ pub struct MailHandler {
 }
 
 impl MailHandler {
+    #[must_use]
     pub fn new(
         s3_client: aws_sdk_s3::Client,
         s3_config: AwsS3Config,
@@ -89,9 +102,30 @@ impl MailHandler {
             if let Some(inner_path) = path {
                 let sender = from;
 
-                let _ = self
+                match self
                     .upload_attachment(inner_path, mime_type, subject, sender)
-                    .await;
+                    .await
+                {
+                    Ok(upload) => {
+                        let key = upload.key;
+                        let sender = upload.sender.unwrap_or("unknown".to_string());
+                        let message = match subject {
+                            Some(subject) => {
+                                format!("\x0310> “\x0f{subject}\x0310” from\x0f {sender}\x0310: https://pub.rwx.im/{key}")
+                            }
+                            None => {
+                                format!("\x0310> Mail received from\x0f {sender}\x0310 https://pub.rwx.im/{key}")
+                            }
+                        };
+
+                        if let Err(err) = self.send_chat_message(message).await {
+                            error!(%err, "could not send notification message");
+                        }
+                    }
+                    Err(err) => {
+                        error!(%err, %mime_type, ?subject, ?sender, "could not upload attachment");
+                    }
+                }
             }
 
             self.num_attachments_processed += 1;
@@ -156,8 +190,8 @@ impl MailHandler {
         mime_type: &str,
         subject: Option<&str>,
         sender: Option<&str>,
-    ) -> Result<String, Error> {
-        let hash_bytes = {
+    ) -> Result<AttachmentUpload, Error> {
+        let sha256_bytes = {
             let mut hasher = Sha256::new();
             let mut file = fs::File::open(&path)?;
             let _ = io::copy(&mut file, &mut hasher)?;
@@ -165,29 +199,19 @@ impl MailHandler {
             hasher.finalize()
         };
 
-        let encoded_hash = BASE64_URL_SAFE_NO_PAD.encode(hash_bytes);
-        let key = format!("~meta/mails/v2/{}", encoded_hash);
+        let encoded_hash = BASE64_URL_SAFE_NO_PAD.encode(sha256_bytes);
+        let key = format!("~meta/mails/v2/{encoded_hash}");
 
         // Check if the file already exists.
         if let Ok(true) = self.object_exists(&key).await {
             debug!(%key, "skipping upload of object as it already exists in the bucket");
 
-            let sender = sender.unwrap_or("unknown");
-
-            if let Some(sub) = subject {
-                let _ = self
-                    .send_chat_message(format!(
-                        "\x0310> “\x0f{sub}\x0310” from\x0f {sender}\x0310: https://pub.rwx.im/{key}"
-                    ))
-                    .await;
-            } else {
-                let _ = self
-                    .send_chat_message(format!(
-                        "\x0310> Mail received from\x0f {sender}\x0310 https://pub.rwx.im/{key}"
-                    ))
-                    .await;
-            }
-            return Ok(key);
+            return Ok(AttachmentUpload {
+                key,
+                sender: sender.map(String::from),
+                subject: subject.map(String::from),
+                cached: true,
+            });
         }
 
         debug!(%key, "uploading object");
@@ -201,37 +225,30 @@ impl MailHandler {
             .content_type(mime_type)
             .content_disposition(content_type_disposition(mime_type));
 
-        let body = ByteStream::from_path(&path).await;
+        match ByteStream::from_path(&path).await {
+            Ok(body) => {
+                let _ = put_object
+                    .body(body)
+                    .send()
+                    .await
+                    .map_err(|e| Error::S3PutObjectFailed(Box::new(e.into())))?;
 
-        if let Ok(b) = body {
-            let _ = put_object
-                .body(b)
-                .send()
-                .await
-                .map_err(|e| Error::S3PutObjectFailed(Box::new(e.into())))?;
-
-            let sender = sender.unwrap_or("unknown");
-
-            if let Some(subject) = subject {
-                let _ = self
-                    .send_chat_message(format!(
-                        "\x0310> “\x0f{subject}\x0310” from\x0f {sender}\x0310: https://pub.rwx.im/{key}"
-                    ))
-                    .await;
-            } else {
-                let _ = self
-                    .send_chat_message(format!(
-                        "\x0310> Mail received from\x0f {sender}\x0310 https://pub.rwx.im/{key}"
-                    ))
-                    .await;
+                return Ok(AttachmentUpload {
+                    key,
+                    sender: sender.map(String::from),
+                    subject: subject.map(String::from),
+                    cached: true,
+                });
+            }
+            Err(err) => {
+                return Err(Error::ByteStream(Box::new(err)));
             }
         }
-
-        Ok("".to_string())
     }
 }
 
 /// Returns the content disposition based on the given `content_type`.
+#[allow(clippy::match_same_arms)]
 fn content_type_disposition(content_type: &str) -> &'static str {
     match content_type {
         "image/jpeg" | "image/png" | "image/heic" | "image/webp" | "image/gif" => "inline",

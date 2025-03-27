@@ -24,7 +24,7 @@ fn resource() -> Resource {
     )
 }
 
-pub fn init(stdout_format: Format, tracing: &config::TracingConfig) -> miette::Result<()> {
+pub fn init(stdout_format: &Format, tracing: &config::TracingConfig) {
     // Create a tracing layer with the configured tracer
     let telemetry_layer = if tracing.enabled {
         let tracer = opentelemetry_otlp::new_pipeline()
@@ -58,6 +58,4 @@ pub fn init(stdout_format: Format, tracing: &config::TracingConfig) -> miette::R
     };
 
     info!("tracing initialized");
-
-    Ok(())
 }

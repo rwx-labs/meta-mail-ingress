@@ -15,6 +15,8 @@ pub enum Error {
     AwsS3Error(#[source] Box<aws_sdk_s3::Error>),
     #[error("s3 error")]
     S3PutObjectFailed(#[source] Box<aws_sdk_s3::Error>),
+    #[error("could not read from bytestream")]
+    ByteStream(#[source] Box<aws_sdk_s3::primitives::ByteStreamError>),
     #[error("reqwest error")]
     Reqwest(#[from] reqwest::Error),
     #[error("the tool `{0}' failed healthcheck, is it installed?")]

@@ -7,6 +7,7 @@ use tracing::info;
 use crate::{http::AuthToken, AppState};
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct MailMetadata {
     /// The intended recipient, if known.
     pub to: Option<String>,
@@ -17,6 +18,7 @@ pub struct MailMetadata {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct Mail {
     /// The raw contents of the e-mail, encoded with base64.
     pub raw: String,
@@ -27,6 +29,7 @@ pub struct Mail {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct MailIngestionRequest {
     pub mails: Vec<Mail>,
     pub started_at: String, // FIXME: this should be deserialized to a time
@@ -68,9 +71,8 @@ mod handlers {
             .with_message_ids();
 
         for mail in &payload.mails {
-            let decoded = match BASE64_STANDARD.decode(&mail.raw) {
-                Ok(data) => data,
-                Err(_) => continue,
+            let Ok(decoded) = BASE64_STANDARD.decode(&mail.raw) else {
+                continue;
             };
 
             match mail_parser.parse(&decoded[..]) {
