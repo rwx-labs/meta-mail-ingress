@@ -23,18 +23,9 @@ fn otel_resource_detectors() -> Vec<Box<dyn ResourceDetector>> {
     ]
 }
 
-/// Set `OTEL_SERVICE_NAME` to the crate name if not provided by the user.
-fn setup_env() {
-    if env::var("OTEL_SERVICE_NAME").is_err() {
-        env::set_var("OTEL_SERVICE_NAME", env!("CARGO_PKG_NAME"));
-    }
-}
-
 pub fn try_init(stdout_format: &Format, tracing: &config::TracingConfig) -> Result<(), Error> {
     // Create a tracing layer with the configured tracer
     let telemetry_layer = if tracing.enabled {
-        setup_env();
-
         // Set up the OTLP exporter
         let otlp_exporter = opentelemetry_otlp::SpanExporter::builder()
             .with_tonic()
@@ -45,7 +36,12 @@ pub fn try_init(stdout_format: &Format, tracing: &config::TracingConfig) -> Resu
         // Resource detectors for tracing context
         let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
             .with_batch_exporter(otlp_exporter)
-            .with_resource(Resource::builder().with_detectors(&res_detectors).build())
+            .with_resource(
+                Resource::builder()
+                    .with_service_name(env!("CARGO_PKG_NAME"))
+                    .with_detectors(&res_detectors)
+                    .build(),
+            )
             .build();
         let scope = InstrumentationScope::builder(env!("CARGO_PKG_NAME"))
             .with_version(env!("CARGO_PKG_VERSION"))
