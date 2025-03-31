@@ -85,7 +85,7 @@ pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
 
     let api_v1_router = api::v1::router();
     let app = Router::new()
-        .nest("/api/v1", api_v1_router)
+        .nest("/v1", api_v1_router)
         .route("/livez", get(healthcheck))
         .route("/readyz", get(healthcheck))
         .with_state(state)
