@@ -53,7 +53,7 @@ async fn main() -> miette::Result<()> {
         .extract()
         .into_diagnostic()?;
 
-    tracing::init(&opts.format, &config.tracing);
+    tracing::try_init(&opts.format, &config.tracing).expect("could not initialize tracing");
 
     let sdk_config = load_aws_config(&config.aws).await;
     let s3_client = aws_s3::Client::new(&sdk_config);
