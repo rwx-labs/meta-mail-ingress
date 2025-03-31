@@ -21,4 +21,8 @@ pub enum Error {
     Reqwest(#[from] reqwest::Error),
     #[error("the tool `{0}' failed healthcheck, is it installed?")]
     ToolCheckFailed(String),
+    #[error("could not install global tracing subscriber")]
+    TracingTryInit(#[from] tracing_subscriber::util::TryInitError),
+    #[error("could not build opentelemetry span exporter")]
+    BuildOtelExporter(#[source] Box<dyn std::error::Error + Sync + Send>),
 }

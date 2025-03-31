@@ -4,6 +4,7 @@ use argh::FromArgs;
 
 /// The output format of logging messages to stdout.
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub enum Format {
     /// Output events as JSON.
     Json,
