@@ -25,4 +25,10 @@ pub enum Error {
     TracingTryInit(#[from] tracing_subscriber::util::TryInitError),
     #[error("could not build opentelemetry span exporter")]
     BuildOtelExporter(#[source] Box<dyn std::error::Error + Sync + Send>),
+    #[error("could not connect to database")]
+    OpenDatabase(#[source] sqlx::Error),
+    #[error("database migration failed")]
+    DatabaseMigration(#[from] sqlx::migrate::MigrateError),
+    #[error("could not acquire handle from database connection pool")]
+    DatabasePoolConnection(#[source] sqlx::Error),
 }

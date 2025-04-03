@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
+use ::tracing::debug;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3 as aws_s3;
 use figment::{
-    providers::{Env, Format, Toml},
     Figment,
+    providers::{Env, Format, Toml},
 };
 use miette::IntoDiagnostic;
 use tokio::sync::Mutex;
@@ -12,6 +13,7 @@ use tokio::sync::Mutex;
 mod api;
 mod cli;
 mod config;
+mod database;
 mod error;
 mod handler;
 mod http;
@@ -64,6 +66,15 @@ async fn main() -> miette::Result<()> {
         config.meta_webhook.token,
         postprocessors,
     )));
+
+    debug!("connecting to database");
+    let db = database::connect(config.database.url.as_str(), &config.database).await?;
+    debug!("connected to database");
+
+    debug!("running database migrations");
+    database::migrate(db.clone()).await?;
+    debug!("database migrations complete");
+
     let app_state = AppState {
         api_token: config.ingestion.api_token,
         mail_handler,

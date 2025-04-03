@@ -6,6 +6,9 @@ endpoint_url = "https://262cf8aeb384b1f034577956e3baa60a.r2.cloudflarestorage.co
 bucket_name = "rwx-pub"
 public_url = "https://pub.rwx.im"
 
+[database]
+url = "postgres://meta_ingress:ch4ngem3@localhost:5432/meta_ingress_development"
+
 [ingestion]
 api_token = "hello-world"
 

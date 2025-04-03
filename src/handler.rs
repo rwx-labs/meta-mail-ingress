@@ -3,15 +3,15 @@ use std::{
     io::{self, Write},
 };
 
-use aws_sdk_s3::{primitives::ByteStream, types::ObjectCannedAcl, Error as AwsS3Error};
-use base64::prelude::{Engine, BASE64_URL_SAFE_NO_PAD};
+use aws_sdk_s3::{Error as AwsS3Error, primitives::ByteStream, types::ObjectCannedAcl};
+use base64::prelude::{BASE64_URL_SAFE_NO_PAD, Engine};
 use mail_parser::Message;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use tempfile::{NamedTempFile, TempPath};
 use tracing::{debug, error, info, instrument};
 
-use crate::{config::AwsS3Config, postprocess::PostProcessor, Error};
+use crate::{Error, config::AwsS3Config, postprocess::PostProcessor};
 
 /// The result of an attachment upload.
 pub struct AttachmentUpload {
@@ -92,10 +92,7 @@ impl MailHandler {
 
             for processor in processors {
                 if let Some(inner_path) = path {
-                    path = match processor.apply(inner_path) {
-                        Ok(temp_path) => Some(temp_path),
-                        Err(_) => None,
-                    }
+                    path = processor.apply(inner_path).ok()
                 }
             }
 
@@ -111,10 +108,14 @@ impl MailHandler {
                         let sender = upload.sender.unwrap_or("unknown".to_string());
                         let message = match subject {
                             Some(subject) => {
-                                format!("\x0310> “\x0f{subject}\x0310” from\x0f {sender}\x0310: https://pub.rwx.im/{key}")
+                                format!(
+                                    "\x0310> “\x0f{subject}\x0310” from\x0f {sender}\x0310: https://pub.rwx.im/{key}"
+                                )
                             }
                             None => {
-                                format!("\x0310> Mail received from\x0f {sender}\x0310 https://pub.rwx.im/{key}")
+                                format!(
+                                    "\x0310> Mail received from\x0f {sender}\x0310 https://pub.rwx.im/{key}"
+                                )
                             }
                         };
 
