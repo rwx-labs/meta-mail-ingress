@@ -31,4 +31,6 @@ pub enum Error {
     DatabaseMigration(#[from] sqlx::migrate::MigrateError),
     #[error("could not acquire handle from database connection pool")]
     DatabasePoolConnection(#[source] sqlx::Error),
+    #[error("Could not discover openid client information")]
+    DiscoverOidcFailed,
 }

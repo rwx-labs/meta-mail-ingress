@@ -15,6 +15,20 @@ pub struct Config {
     pub aws: AwsConfig,
     /// Meta webhook configuration
     pub meta_webhook: MetaWebhookConfig,
+    /// OpenID authentication configuration
+    pub auth: AuthConfig,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct AuthConfig {
+    /// OpenID issuer
+    pub issuer_url: Url,
+    /// OAuth client id
+    pub client_id: String,
+    /// OAuth client secret
+    pub client_secret: String,
+    /// OAuth redirect (callback) url
+    pub redirect_url: Url,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]

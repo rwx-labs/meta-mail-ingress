@@ -1,19 +1,23 @@
 use std::net::SocketAddr;
 
 use axum::{
+    Router,
     extract::{DefaultBodyLimit, FromRequestParts},
-    http::{header::AUTHORIZATION, request::Parts, StatusCode},
+    http::{StatusCode, header::AUTHORIZATION, request::Parts},
     response::IntoResponse,
     routing::get,
-    Router,
 };
+use axum_login::AuthManagerLayerBuilder;
 use listenfd::ListenFd;
 use miette::IntoDiagnostic;
+use time::Duration;
 use tokio::{net::TcpListener, signal};
 use tower_http::{
     compression::{CompressionLayer, CompressionLevel},
     trace::TraceLayer,
 };
+use tower_sessions::ExpiredDeletion;
+use tower_sessions::{Expiry, SessionManagerLayer};
 use tracing::{debug, instrument};
 
 use crate::api;
@@ -84,11 +88,31 @@ pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
     debug!("starting http server");
 
     let api_v1_router = api::v1::router();
+    let auth_router = api::auth::router();
+
+    let session_store = state.session_store.clone();
+
+    let _deletion_task = tokio::task::spawn(
+        session_store
+            .clone()
+            .continuously_delete_expired(tokio::time::Duration::from_secs(360)),
+    );
+
+    let session_layer = SessionManagerLayer::new(session_store.clone())
+        .with_secure(false)
+        .with_same_site(tower_sessions::cookie::SameSite::Lax)
+        .with_expiry(Expiry::OnInactivity(Duration::seconds(360)));
+
+    let auth_layer =
+        AuthManagerLayerBuilder::new(state.authenticator.clone(), session_layer).build();
+
     let app = Router::new()
         .nest("/v1", api_v1_router)
+        .nest("/auth", auth_router)
         .route("/livez", get(healthcheck))
         .route("/readyz", get(healthcheck))
         .with_state(state)
+        .layer(auth_layer)
         .fallback(not_found)
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new().quality(CompressionLevel::Fastest))

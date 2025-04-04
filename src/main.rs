@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use ::tracing::debug;
+use ::tracing::{debug, info};
+use auth::Authenticator;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3 as aws_s3;
 use figment::{
@@ -9,8 +10,10 @@ use figment::{
 };
 use miette::IntoDiagnostic;
 use tokio::sync::Mutex;
+use tower_sessions_sqlx_store::PostgresStore;
 
 mod api;
+mod auth;
 mod cli;
 mod config;
 mod database;
@@ -21,6 +24,7 @@ mod postprocess;
 mod tracing;
 
 pub use config::Config;
+pub use database::Database;
 pub use error::Error;
 pub use handler::MailHandler;
 
@@ -28,6 +32,9 @@ pub use handler::MailHandler;
 pub struct AppState {
     pub api_token: String,
     pub mail_handler: Arc<Mutex<MailHandler>>,
+    pub authenticator: Authenticator,
+    pub session_store: PostgresStore,
+    pub database: Database,
 }
 
 async fn load_aws_config(app_aws_config: &config::AwsConfig) -> aws_config::SdkConfig {
@@ -69,15 +76,35 @@ async fn main() -> miette::Result<()> {
 
     debug!("connecting to database");
     let db = database::connect(config.database.url.as_str(), &config.database).await?;
-    debug!("connected to database");
+    info!("connected to database");
 
     debug!("running database migrations");
     database::migrate(db.clone()).await?;
     debug!("database migrations complete");
 
+    debug!("configuring authenticator");
+    let authenticator = Authenticator::discover(
+        db.clone(),
+        config.auth.issuer_url.clone(),
+        config.auth.client_id.clone(),
+        config.auth.client_secret.clone(),
+        config.auth.redirect_url.clone(),
+    )
+    .await?;
+    debug!("finished configuration authenticator");
+
+    // Set up the session layer
+    debug!("creating session store");
+    let session_store = PostgresStore::new(db.clone());
+    debug!("migrating session store");
+    session_store.migrate().await.into_diagnostic()?;
+
     let app_state = AppState {
         api_token: config.ingestion.api_token,
         mail_handler,
+        authenticator,
+        session_store,
+        database: db.clone(),
     };
 
     http::start_server(app_state).await?;

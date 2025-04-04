@@ -1,18 +1,18 @@
 use std::env;
 
-use opentelemetry::trace::TracerProvider;
 use opentelemetry::InstrumentationScope;
+use opentelemetry::trace::TracerProvider;
 use opentelemetry_resource_detectors::{
     HostResourceDetector, K8sResourceDetector, OsResourceDetector,
 };
-use opentelemetry_sdk::resource::ResourceDetector;
 use opentelemetry_sdk::Resource;
-use tracing::info;
+use opentelemetry_sdk::resource::ResourceDetector;
+use tracing::debug;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use crate::Error;
 use crate::cli::Format;
 use crate::config;
-use crate::Error;
 
 /// Returns a list of resource detectors to use to enrich OTel attributes.
 fn otel_resource_detectors() -> Vec<Box<dyn ResourceDetector>> {
@@ -75,7 +75,7 @@ pub fn try_init(stdout_format: &Format, tracing: &config::TracingConfig) -> Resu
             .try_init()?,
     }
 
-    info!("tracing initialized");
+    debug!("tracing initialized");
 
     Ok(())
 }

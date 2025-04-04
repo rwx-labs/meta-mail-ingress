@@ -92,7 +92,7 @@ impl MailHandler {
 
             for processor in processors {
                 if let Some(inner_path) = path {
-                    path = processor.apply(inner_path).ok()
+                    path = processor.apply(inner_path).ok();
                 }
             }
 

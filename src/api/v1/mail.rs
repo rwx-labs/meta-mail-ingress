@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use axum::{routing::post, Router};
+use axum::{Router, routing::post};
 use serde::Deserialize;
 use tracing::info;
 
-use crate::{http::AuthToken, AppState};
+use crate::{AppState, http::AuthToken};
 
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
@@ -40,8 +40,8 @@ pub fn router() -> Router<AppState> {
 }
 
 mod handlers {
-    use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
-    use base64::prelude::{Engine, BASE64_STANDARD};
+    use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+    use base64::prelude::{BASE64_STANDARD, Engine};
     use mail_parser::MessageParser;
     use tracing::{debug, error};
 
@@ -55,6 +55,7 @@ mod handlers {
         State(AppState {
             api_token,
             mail_handler,
+            ..
         }): State<AppState>,
         Json(payload): Json<MailIngestionRequest>,
     ) -> impl IntoResponse {
