@@ -1,25 +1,50 @@
+# Authentication settings for OIDC provider (e.g., Auth0)
 [auth]
+# URL of the OpenID Connect issuer
 issuer_url = "https://rwx-dev.eu.auth0.com/"
+# Client ID from your OIDC provider
 client_id = "6eQau3Anf4QmSKrHDHDN9I1mGH61McJd"
+# Client secret from your OIDC provider (keep this secure)
 client_secret = "redacted"
+# URL where users will be redirected after authentication
+# Example: For production, use https://example.com/auth/callback
 redirect_url = "http://localhost:3000/auth/callback"
 
+# AWS configuration for storage access
 [aws]
+# Optional: AWS profile name to use
 # profile_name = "cloudflare-r2"
+# S3-compatible endpoint URL (e.g., Cloudflare R2)
 endpoint_url = "https://262cf8aeb384b1f034577956e3baa60a.r2.cloudflarestorage.com"
 
+# S3 bucket configuration
 [aws.s3]
+# Name of the S3 bucket where files will be stored
 bucket_name = "rwx-pub"
+# Public URL for accessing uploaded files
+# Example: Files uploaded to "docs/example.pdf" will be available at 
+# https://pub.rwx.im/docs/example.pdf
 public_url = "https://pub.rwx.im"
 
+# Database connection settings
 [database]
-url = "postgres://meta_ingress:ch4ngem3@localhost:5432/meta_ingress_development"
+# PostgreSQL connection string
+# Format: postgresql://username:password@host:port/database_name
+url = "postgresql://meta_ingress:ch4ngem3@localhost:5432/meta_ingress_development"
 
+# Email ingestion API settings
 [ingestion]
+# Token used to authenticate API requests for mail ingestion
+# Example: In production, use a secure random string like "j4k2h54kj23h54kj2h3"
 api_token = "hello-world"
 
+# Meta API webhook configuration
 [meta_webhook]
+# Token for authenticating webhook requests from Meta
+# Example: Set this to the token provided by Meta for webhook verification
 token = ""
 
+# Tracing and logging configuration
 [tracing]
+# Enable or disable detailed tracing logs
 enabled = true

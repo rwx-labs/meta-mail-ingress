@@ -39,6 +39,6 @@ pub enum Error {
     /// An error occurred while trying to retrieve provider metadata.
     #[error("Could not retrieve OpenID Connect provider metadata")]
     OidcDiscovery(#[from] OidcDiscoveryError),
-    #[error("Could not configure OpenID Connect request")]
-    OidcConfiguration(#[from] openidconnect::ConfigurationError),
+    #[error("Internal error")]
+    InternalError,
 }

@@ -97,7 +97,7 @@ impl AuthnBackend for Authenticator {
             .bind(user_id)
             .fetch_optional(&self.db)
             .await
-            .inspect_err(|e| error!(?e, %user_id, "could not get user"))
+            .inspect_err(|err| error!(%user_id, "could not get user: {err}"))
             .map_err(|_| Self::Error::InternalError)?)
     }
 }
