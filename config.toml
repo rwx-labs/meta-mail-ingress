@@ -1,3 +1,9 @@
+[auth]
+issuer_url = "https://rwx-dev.eu.auth0.com/"
+client_id = "6eQau3Anf4QmSKrHDHDN9I1mGH61McJd"
+client_secret = "redacted"
+redirect_url = "http://localhost:3000/auth/callback"
+
 [aws]
 # profile_name = "cloudflare-r2"
 endpoint_url = "https://262cf8aeb384b1f034577956e3baa60a.r2.cloudflarestorage.com"
@@ -17,9 +23,3 @@ token = ""
 
 [tracing]
 enabled = true
-
-[auth]
-issuer_url = "https://rwx-prod.eu.auth0.com/"
-client_id = "5HqyKOfK4ULgEuTFvomHvoNjZduCJ98w"
-client_secret = "redacted"
-redirect_url = "http://localhost:3000/auth/callback"

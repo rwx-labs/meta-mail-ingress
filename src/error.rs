@@ -1,7 +1,12 @@
 use std::io;
 
 use miette::Diagnostic;
+use openidconnect::{DiscoveryError, HttpClientError as OidcHttpClientError};
 use thiserror::Error;
+
+use crate::auth::HttpClientError;
+
+type OidcDiscoveryError = DiscoveryError<OidcHttpClientError<HttpClientError>>;
 
 #[derive(Debug, Error, Diagnostic)]
 pub enum Error {
@@ -31,6 +36,9 @@ pub enum Error {
     DatabaseMigration(#[from] sqlx::migrate::MigrateError),
     #[error("could not acquire handle from database connection pool")]
     DatabasePoolConnection(#[source] sqlx::Error),
-    #[error("Could not discover openid client information")]
-    DiscoverOidcFailed,
+    /// An error occurred while trying to retrieve provider metadata.
+    #[error("Could not retrieve OpenID Connect provider metadata")]
+    OidcDiscovery(#[from] OidcDiscoveryError),
+    #[error("Could not configure OpenID Connect request")]
+    OidcConfiguration(#[from] openidconnect::ConfigurationError),
 }

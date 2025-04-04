@@ -83,6 +83,7 @@ pub async fn healthcheck() -> (StatusCode, &'static str) {
     (StatusCode::OK, "ok")
 }
 
+/// Start HTTP server.
 #[instrument(skip_all)]
 pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
     debug!("starting http server");
