@@ -1,11 +1,11 @@
 use std::net::SocketAddr;
 
 use axum::{
-    Router,
-    extract::{DefaultBodyLimit, FromRequestParts},
-    http::{StatusCode, header::AUTHORIZATION, request::Parts},
+    extract::FromRequestParts,
+    http::{header::AUTHORIZATION, request::Parts, StatusCode},
     response::IntoResponse,
     routing::get,
+    Router,
 };
 use axum_login::AuthManagerLayerBuilder;
 use listenfd::ListenFd;
@@ -116,8 +116,7 @@ pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
         .layer(auth_layer)
         .fallback(not_found)
         .layer(TraceLayer::new_for_http())
-        .layer(CompressionLayer::new().quality(CompressionLevel::Fastest))
-        .layer(DefaultBodyLimit::max(30 * 1024 * 1024));
+        .layer(CompressionLayer::new().quality(CompressionLevel::Fastest));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let mut listenfd = ListenFd::from_env();
