@@ -31,13 +31,12 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn get_user_uploads(user_id: i32, db: &crate::Database) -> Result<Vec<UserUpload>, Error> {
-    let addrs: Vec<UserUpload> =
-        sqlx::query_as("SELECT * FROM user_file_uploads WHERE user_id = $1")
-            .bind(user_id)
-            .fetch_all(db)
-            .await
-            .inspect_err(|err| error!(%user_id, "could not read users uploads: {err}"))
-            .map_err(|_| Error::InternalError)?;
+    let addrs: Vec<UserUpload> = sqlx::query_as("SELECT * FROM user_uploads WHERE user_id = $1")
+        .bind(user_id)
+        .fetch_all(db)
+        .await
+        .inspect_err(|err| error!(%user_id, "could not read users uploads: {err}"))
+        .map_err(|_| Error::InternalError)?;
 
     Ok(addrs)
 }
