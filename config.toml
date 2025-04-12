@@ -26,6 +26,13 @@ bucket_name = "rwx-pub"
 # https://pub.rwx.im/docs/example.pdf
 public_url = "https://pub.rwx.im"
 
+# User upload settings
+[upload]
+# Maximum size of any individual file
+max_file_size = 536_870_912 # 512 MiB
+# Directory used for storing partial uploads
+temp_path = "/tmp/meta-ingress"
+
 # Database connection settings
 [database]
 # PostgreSQL connection string

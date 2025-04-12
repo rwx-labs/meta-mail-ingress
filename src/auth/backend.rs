@@ -32,7 +32,7 @@ impl AuthnBackend for Authenticator {
             .request_async(&self.http_client)
             .await
             .inspect_err(|err| {
-                error!("could not exchange authorization token for access token: {err}")
+                error!("could not exchange authorization token for access token: {err}");
             })
             .map_err(|_| AuthError::InvalidToken)?;
 

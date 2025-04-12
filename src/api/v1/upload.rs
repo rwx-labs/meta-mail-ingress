@@ -1,5 +1,4 @@
-use axum::{body::Bytes, extract::DefaultBodyLimit, routing::get, BoxError, Router, http::StatusCode};
-use futures::{Stream, TryStreamExt};
+use axum::{Router, extract::DefaultBodyLimit, routing::get};
 use serde::{Deserialize, Serialize};
 use serde_with::{hex::Hex, serde_as};
 use sqlx::prelude::FromRow;
@@ -43,24 +42,42 @@ async fn get_user_uploads(user_id: i32, db: &crate::Database) -> Result<Vec<User
     Ok(addrs)
 }
 
-async fn stream_to_file<S, E>(path: &str, stream: S) -> Result<(), (StatusCode, String)>
-where
-    S: Stream<Item = Result<Bytes, E>>,
-    E: Into<BoxError>,
-{
-    Ok(())
-}
+// async fn stream_to_temp_file<S, E>(stream: S) -> Result<(), (StatusCode, String)>
+// where
+//     S: Stream<Item = Result<Bytes, E>>,
+//     E: Into<BoxError>,
+// {
+//     async {
+//         // Convert the stream into an `AsyncRead`.
+//         let body_with_io_error = stream.map_err(io::Error::other);
+//         let body_reader = StreamReader::new(body_with_io_error);
+//         futures::pin_mut!(body_reader);
+//
+//         // Create the file. `File` implements `AsyncWrite`.
+//         let mut file = NamedTempFile::new().expect("could not create temp file");
+//
+//         // Copy the body into the file.
+//         tokio::io::copy(&mut body_reader, &mut file).await?;
+//
+//         Ok::<_, io::Error>(())
+//     }
+//     .await
+//     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))
+// }
 
 mod handlers {
-    use axum::{http::StatusCode, extract::{Multipart, State}, response::{IntoResponse, Json}};
+    use axum::{
+        extract::{Multipart, State},
+        http::StatusCode,
+        response::{IntoResponse, Json},
+    };
     use tracing::{debug, error};
-    use tempfile::NamedTempFile;
 
-    use crate::{auth::AuthSession, AppState};
+    use crate::{AppState, auth::AuthSession};
 
     pub(crate) async fn create_upload(
         auth_session: AuthSession,
-        State(AppState { database, .. }): State<AppState>,
+        State(AppState { database: _, .. }): State<AppState>,
         mut multipart: Multipart,
     ) -> Result<(), (StatusCode, String)> {
         match auth_session.user {
@@ -71,8 +88,6 @@ mod handlers {
                     .inspect_err(|err| error!("could not read next multipart field: {err}"))
                     .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
                 {
-                    let mut file = NamedTempFile::new().expect("could not create temp file");
-
                     let name = field.name().unwrap().to_string();
                     let file_name = field.file_name().unwrap().to_string();
                     let content_type = field.content_type().unwrap().to_string();
@@ -82,7 +97,7 @@ mod handlers {
 
                 Ok(())
             }
-            None => Err((StatusCode::UNAUTHORIZED, "".to_string())),
+            None => Err((StatusCode::UNAUTHORIZED, String::new())),
         }
     }
 

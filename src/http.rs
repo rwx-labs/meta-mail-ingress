@@ -1,11 +1,12 @@
 use std::net::SocketAddr;
 
 use axum::{
-    extract::FromRequestParts,
-    http::{header::AUTHORIZATION, request::Parts, StatusCode},
-    response::IntoResponse,
-    routing::get,
     Router,
+    extract::FromRequestParts,
+    handler::HandlerWithoutStateExt,
+    http::{StatusCode, header::AUTHORIZATION, request::Parts},
+    response::Html,
+    routing::get,
 };
 use axum_login::AuthManagerLayerBuilder;
 use listenfd::ListenFd;
@@ -14,6 +15,7 @@ use time::Duration;
 use tokio::{net::TcpListener, signal};
 use tower_http::{
     compression::{CompressionLayer, CompressionLevel},
+    services::ServeDir,
     trace::TraceLayer,
 };
 use tower_sessions::ExpiredDeletion;
@@ -48,8 +50,11 @@ where
 }
 
 #[instrument]
-async fn not_found() -> impl IntoResponse {
-    (StatusCode::NOT_FOUND, "404 page not found")
+async fn not_found() -> (StatusCode, Html<&'static str>) {
+    (
+        StatusCode::NOT_FOUND,
+        Html(include_str!("../static/not_found.html")),
+    )
 }
 
 async fn shutdown_signal() {
@@ -107,6 +112,11 @@ pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
     let auth_layer =
         AuthManagerLayerBuilder::new(state.authenticator.clone(), session_layer).build();
 
+    let serve_dir = ServeDir::new("web/build")
+        .not_found_service(not_found.into_service())
+        .precompressed_br()
+        .precompressed_gzip();
+
     let app = Router::new()
         .nest("/v1", api_v1_router)
         .nest("/auth", auth_router)
@@ -114,7 +124,7 @@ pub async fn start_server(state: crate::AppState) -> miette::Result<()> {
         .route("/readyz", get(healthcheck))
         .with_state(state)
         .layer(auth_layer)
-        .fallback(not_found)
+        .fallback_service(serve_dir)
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new().quality(CompressionLevel::Fastest));
 
